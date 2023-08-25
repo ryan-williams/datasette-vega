@@ -1,0 +1,29 @@
+name: Deploy demo to GitHub Pages
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      basePath:
+        description: 'Base path for the demo'
+        default: '/datasette-vega'
+jobs:
+  deploy:
+    name: Deploy demo to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm install
+      - name: Compute $BASE_PATH
+        run: echo "BASE_PATH=${{ github.event.push && '/datasette-vega' || inputs.basePath }}" >> $GITHUB_ENV
+      - name: Build
+        run: npm run build
+      - name: Export static site
+        run: |
+          echo "Exporting to out$BASE_PATH"
+          npm run export -o out$BASE_PATH
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.1
+        with:
+          branch: ghp
+          folder: out
