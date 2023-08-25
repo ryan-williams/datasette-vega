@@ -3,7 +3,6 @@ import {defStringParam, enumParam, Param, ParsedParam, parseQueryParams, stringP
 import css from "../styles/Home.module.scss";
 import DatasetteVega from "../src/DatasetteVega";
 import Head from "next/head";
-import {StandardType} from "vega-lite/src/type";
 import Link from "next/link";
 import {getBasePath} from "next-utils/basePath";
 
@@ -47,7 +46,7 @@ export const AxisTypeQueryParams: { [k in AxisType]: string } = {
     "Label": 'l',
     "Category": 'c'
 }
-export const VegaAxisTypes: { [k in AxisType]: StandardType } = {
+export const VegaAxisTypes: { [k in AxisType]: string } = {
     "Numeric": 'quantitative',
     "Numeric, binned": 'quantitative',
     "Date/time": 'temporal',

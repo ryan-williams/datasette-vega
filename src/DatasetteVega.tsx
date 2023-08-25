@@ -1,9 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState, MouseEvent} from 'react'
 import vegaEmbed from 'vega-embed'
 import {AxisType, AxisTypes, MarkerType, MarkerTypes, VegaAxisTypes} from "../pages"
-import {Encoding} from "vega-lite/src/encoding"
-import {Mark} from "vega-lite/src/mark"
-import {Field} from "vega-lite/src/channeldef"
 
 const escapeString = (s: string) => (s || '').replace(/"/g, '\\x22').replace(/'/g, '\\x27');
 
@@ -177,8 +174,8 @@ export default function DatasetteVega(
             const yt = VegaAxisTypes[yType]
             const xBin = !!/, binned$/.exec(xType)
             const yBin = !!/, binned$/.exec(yType)
-            const mark: Mark = markerType == 'Bar' ? 'bar' : markerType == 'Line' ? 'line' : 'circle'
-            let encoding: Encoding<Field> = {
+            const mark = markerType == 'Bar' ? 'bar' : markerType == 'Line' ? 'line' : 'circle'
+            let encoding: any = {
                 x: { field: xColumn, type: xt, bin: xBin, },
                 y: { field: yColumn, type: yt, bin: yBin, },
                 tooltip: { field: "_tooltip_summary", type: "ordinal", },
