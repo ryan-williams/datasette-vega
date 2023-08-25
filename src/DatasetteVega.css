@@ -84,27 +84,17 @@
 }
 .datasette-vega button,
 .datasette-vega-inactive button {
-  background-color: #fafafa;
   border: 1px solid #ccc;
   font-weight: 400;
   cursor: pointer;
-  text-align: center;
   vertical-align: middle;
   padding: .5em 0.8em;
   line-height: 1;
   border-radius: .25rem;
   -webkit-appearance: button;
-  font-size: 0.7em;
 }
 .datasette-vega-inactive {
   margin-bottom: 1em;
-}
-
-form.datasette-vega label {
-  font-weight: bold;
-  display: inline;
-  width: auto;
-  padding-right: 0.3em;
 }
 
 form.datasette-vega div {

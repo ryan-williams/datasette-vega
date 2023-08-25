@@ -1,56 +1,97 @@
-import Head from 'next/head'
-import styles from '../styles/Home.module.css'
-import DatasetteVega from "../src/DatasetteVega";
 import React, {FormEvent, useCallback, useEffect, useMemo} from "react";
+import {defStringParam, enumParam, Param, ParsedParam, parseQueryParams, stringParam} from "next-utils/params";
+import css from "../styles/Home.module.scss";
+import DatasetteVega from "../src/DatasetteVega";
+import Head from "next/head";
+import {StandardType} from "vega-lite/src/type";
 
 const examples = {
-    defaultUrl: "https://fivethirtyeight.datasettes.com/fivethirtyeight/nba-elo~2Fnbaallelo.json",
-    gamePtsTeamId: "/?url=https%3A%2F%2Ffivethirtyeight.datasettes.com%2Ffivethirtyeight%2Fnba-elo~2Fnbaallelo.json#g.mark=bar&g.x_column=game_id&g.x_type=ordinal&g.y_column=pts&g.y_type=quantitative&g.color_column=team_id",
-    ptsResult: "/?url=https%3A%2F%2Ffivethirtyeight.datasettes.com%2Ffivethirtyeight%2Fnba-elo%7E2Fnbaallelo.json#g.mark=circle&g.x_column=opp_pts&g.x_type=quantitative&g.y_column=pts&g.y_type=quantitative&g.color_column=game_result&g.size_column=opp_pts",
+    defaultUrl: "fivethirtyeight.datasettes.com/fivethirtyeight/nba-elo~2Fnbaallelo.json",
+    gamePtsTeamId: "/?u=fivethirtyeight.datasettes.com%2Ffivethirtyeight%2Fnba-elo~2Fnbaallelo.json&m=b&x=game_id&xt=c&y=pts&yt=n&c=team_id",
+    ptsResult: "/?u=fivethirtyeight.datasettes.com%2Ffivethirtyeight%2Fnba-elo%7E2Fnbaallelo.json&m=s&x=opp_pts&xt=n&y=pts&yt=n&c=game_result&s=pts",
 }
 
-const matchesCurrentHostAndPath = (url: string) => {
-    // Given a url, is it the same host and path as current page?
-    // (ignores querystring and fragment hash)
-    url = url.split('#')[0];
-    // Only activate if link is to current page (presumably with different querystring)
-    var currentHostAndPath = window.location.hostname;
-    if (window.location.port !== '') {
-        currentHostAndPath += ':' + window.location.port;
-    }
-    currentHostAndPath += window.location.pathname;
-    // Ignore http/s due to https://github.com/simonw/datasette/issues/333
-    var linkedHostAndPath = url.split('://')[1].split('?')[0];
-    return currentHostAndPath === linkedHostAndPath;
-};
+type Params = {
+    u: Param<string>
+    m: Param<MarkerType>
+    x: Param<string | undefined>
+    xt: Param<AxisType>
+    y: Param<string | undefined>
+    yt: Param<AxisType>
+    c: Param<string | undefined>
+    s: Param<string | undefined>
+}
+
+type ParsedParams = {
+    u: ParsedParam<string>,
+    m: ParsedParam<MarkerType>,
+    x: ParsedParam<string | undefined>,
+    xt: ParsedParam<AxisType>,
+    y: ParsedParam<string | undefined>,
+    yt: ParsedParam<AxisType>,
+    c: ParsedParam<string | undefined>,
+    s: ParsedParam<string | undefined>,
+}
+
+export type MarkerType = "Bar" | "Line" | "Scatter"
+export const MarkerTypes = [ "Bar", "Line", "Scatter" ]
+export type AxisType = "Numeric" | "Numeric, binned" | "Date/time" | "Date/time, binned" | "Label" | "Category"
+export const AxisTypes = [ "Numeric", "Numeric, binned", "Date/time", "Date/time, binned", "Label", "Category" ]
+export const AxisTypeQueryParams: { [k in AxisType]: string } = {
+    "Numeric": 'n',
+    "Numeric, binned": 'nb',
+    "Date/time": 'd',
+    "Date/time, binned": 'db',
+    "Label": 'l',
+    "Category": 'c'
+}
+export const VegaAxisTypes: { [k in AxisType]: StandardType } = {
+    "Numeric": 'quantitative',
+    "Numeric, binned": 'quantitative',
+    "Date/time": 'temporal',
+    "Date/time, binned": 'temporal',
+    "Label": 'ordinal',
+    "Category": 'nominal'
+}
 
 export default function Home() {
-    const [ jsonUrl, setJsonUrl ] = React.useState(examples.defaultUrl)
-    const onFragmentChange = () => {
-        if (window.location.hash.length === 0) {
-            return;
-        }
-        Array.from(document.getElementsByTagName('form')).forEach(form => {
-            const action = form.action.split('#')[0];
-            if (matchesCurrentHostAndPath(action)) {
-                form.action = action + window.location.hash;
-            }
-        });
-    };
+    const params: Params = {
+        u: defStringParam(examples.defaultUrl),
+        m: enumParam<MarkerType>("Bar", { Bar: 'b', Line: 'l', Scatter: 's' }),
+        x: stringParam(),
+        xt: enumParam<AxisType>("Label", AxisTypeQueryParams),
+        y: stringParam(),
+        yt: enumParam<AxisType>("Numeric", AxisTypeQueryParams),
+        c: stringParam(),
+        s: stringParam(),
+    }
+    const {
+        u: [ jsonUrl, setJsonUrl ],
+        m: [ markerType, setMarkerType ],
+        x: [ xColumn, setXColumn ],
+        xt: [ xType, setXType ],
+        y: [ yColumn, setYColumn ],
+        yt: [ yType, setYType ],
+        c: [ colorColumn, setColorColumn ],
+        s: [ sizeColumn, setSizeColumn ],
+    }: ParsedParams = parseQueryParams({ params })
+
+    const location = (typeof window == "undefined") ? null : window.location
 
     useEffect(
         () => {
+            if (!location) return
             // Dev mode - use graph elements already on the index.html page
-            let m = /\?url=(.*)/.exec(window.location.search)
+            let m = /\?url=(.*)/.exec(location.search)
             if (m) {
                 setJsonUrl(decodeURIComponent(m[1]))
             }
         },
-        [ window.location.search ]
+        [ location?.search ]
     )
 
-    const arrayJsonUrl = useMemo(
-        () => `${jsonUrl}${(jsonUrl.indexOf('?') > -1) ? '&' : '?'}_shape=array`,
+    const fullJsonUrl = useMemo(
+        () => /^https?:\/\//.exec(jsonUrl) ? jsonUrl : `https://${jsonUrl}`,
         [ jsonUrl ]
     )
 
@@ -59,37 +100,45 @@ export default function Home() {
             e.preventDefault()
             const input = e.currentTarget.elements.namedItem("url") as HTMLInputElement
             const jsonUrl = input.value
-            window.location.href = `?url=${encodeURIComponent(jsonUrl)}`
+            setJsonUrl(jsonUrl)
+            // window.location.href = `?url=${encodeURIComponent(jsonUrl)}`
         },
         []
     )
 
     return (
-        <div className={styles.container}>
+        <div className={css.container}>
             <Head>
                 <title>Datasette-Vega</title>
                 <meta name="description" content="Demo of Datasette-Vega React component" />
                 <link rel="icon" href="/favicon.ico" />
             </Head>
 
-            <main className={styles.main}>
-                <h1 className={styles.title}>Datasette Vega</h1>
+            <main className={css.main}>
+                <h1 className={css.title}>Datasette Vega</h1>
                 <p>Enter the URL of the JSON version of any Datasette table:</p>
-                <form action="." onSubmit={handleJsonUrlFormSubmit} method="GET" style={{ marginBottom: "2em", }}>
-                    <input id="jsonUrl" type="text" name="url" value={examples.defaultUrl} style={{ width: "80%", fontSize: "1.2em", }} />
+                <form className={css.jsonUrlForm} onSubmit={handleJsonUrlFormSubmit} method="GET">
+                    <input id="jsonUrl" type="text" name="url" defaultValue={examples.defaultUrl} style={{ width: "80%", fontSize: "1.2em", }} />
                     <input type="submit" value="Load" style={{ fontSize: "1.2em", border: "1px solid #ccc", }} />
                     <p>
                         Examples:
-                        <a href={examples.gamePtsTeamId}>game_id/pts/team_id</a>,
-                        <a href={examples.ptsResult}>pts/opp_pts/result</a>
+                        {' '}<a href={examples.gamePtsTeamId}>game_id/pts/team_id</a>,
+                        {' '}<a href={examples.ptsResult}>pts/opp_pts/result</a>
                     </p>
                 </form>
-                <div id="vis-tool">
-                    <DatasetteVega base_url={arrayJsonUrl} onFragmentChange={onFragmentChange} />
-                </div>
-                <div id="vis-wrapper" style={{ overflow: "auto" }}>
-                    <div id="vis"></div>
-                </div>
+                <DatasetteVega
+                    containerClass={css.visContainer}
+                    wrapperClass={css.visWrapper}
+                    visDivClass={css.visDiv}
+                    jsonUrl={fullJsonUrl}
+                    markerType={markerType} setMarkerType={setMarkerType}
+                    xColumn={xColumn} setXColumn={setXColumn}
+                    xType={xType} setXType={setXType}
+                    yColumn={yColumn} setYColumn={setYColumn}
+                    yType={yType} setYType={setYType}
+                    colorColumn={colorColumn} setColorColumn={setColorColumn}
+                    sizeColumn={sizeColumn} setSizeColumn={setSizeColumn}
+                />
             </main>
         </div>
     )
