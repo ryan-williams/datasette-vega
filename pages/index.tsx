@@ -4,6 +4,7 @@ import css from "../styles/Home.module.scss";
 import DatasetteVega from "../src/DatasetteVega";
 import Head from "next/head";
 import {StandardType} from "vega-lite/src/type";
+import Link from "next/link";
 
 const examples = {
     defaultUrl: "fivethirtyeight.datasettes.com/fivethirtyeight/nba-elo~2Fnbaallelo.json",
@@ -122,8 +123,8 @@ export default function Home() {
                     <input type="submit" value="Load" style={{ fontSize: "1.2em", border: "1px solid #ccc", }} />
                     <p>
                         Examples:
-                        {' '}<a href={examples.gamePtsTeamId}>game_id/pts/team_id</a>,
-                        {' '}<a href={examples.ptsResult}>pts/opp_pts/result</a>
+                        {' '}<Link href={examples.gamePtsTeamId}>game_id/pts/team_id</Link>,
+                        {' '}<Link href={examples.ptsResult}>pts/opp_pts/result</Link>
                     </p>
                 </form>
                 <DatasetteVega
