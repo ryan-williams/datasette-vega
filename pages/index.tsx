@@ -5,6 +5,7 @@ import DatasetteVega from "../src/DatasetteVega";
 import Head from "next/head";
 import {StandardType} from "vega-lite/src/type";
 import Link from "next/link";
+import {getBasePath} from "next-utils/basePath";
 
 const examples = {
     defaultUrl: "fivethirtyeight.datasettes.com/fivethirtyeight/nba-elo~2Fnbaallelo.json",
@@ -107,6 +108,8 @@ export default function Home() {
         []
     )
 
+    const basePath = getBasePath()
+
     return (
         <div className={css.container}>
             <Head>
@@ -123,8 +126,8 @@ export default function Home() {
                     <input type="submit" value="Load" style={{ fontSize: "1.2em", border: "1px solid #ccc", }} />
                     <p>
                         Examples:
-                        {' '}<Link href={examples.gamePtsTeamId}>game_id/pts/team_id</Link>,
-                        {' '}<Link href={examples.ptsResult}>pts/opp_pts/result</Link>
+                        {' '}<Link href={`${basePath}${examples.gamePtsTeamId}`}>game_id/pts/team_id</Link>,
+                        {' '}<Link href={`${basePath}${examples.ptsResult}`}>pts/opp_pts/result</Link>
                     </p>
                 </form>
                 <DatasetteVega
