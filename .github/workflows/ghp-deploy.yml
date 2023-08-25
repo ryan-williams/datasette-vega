@@ -12,19 +12,24 @@ jobs:
     name: Deploy demo to GitHub Pages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: npm install
       - name: Compute $BASE_PATH
-        run: echo "BASE_PATH=${{ github.event_name == 'push' && '/datasette-vega' || inputs.basePath }}" >> $GITHUB_ENV
+        run: |
+          # `next.config.js` reads $BASE_PATH and adjusts same-site URLs (e.g. <Link>s that just change query params)
+          # accordingly.
+          # This makes the demo work when deployed to a sub-path (e.g. /datasette-vega) of an existing GitHub Pages
+          # domain (e.g. one hosted at the root GitHub org/user level).
+          echo "BASE_PATH=${{ github.event_name == 'push' && '/datasette-vega' || inputs.basePath }}" >> $GITHUB_ENV
       - name: Verify $BASE_PATH
         run: |
           echo "BASE_PATH: $BASE_PATH"
+      - uses: actions/checkout@v3
+      - run: npm install
       - name: Build
         run: npm run build
       - name: Export static site
-        run: |
-          echo "Exporting to out$BASE_PATH"
-          npm run export -- -o out$BASE_PATH
+        run: npm run export
+      - name: Disable Jekyll (GitHub Pages default)
+        run: touch out/.nojekyll
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.1
         with:
