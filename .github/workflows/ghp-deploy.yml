@@ -24,9 +24,7 @@ jobs:
           echo "BASE_PATH: $BASE_PATH"
       - uses: actions/checkout@v3
       - run: npm install
-      - name: Build
-        run: npm run build
-      - name: Export static site
+      - name: Build + export static site
         run: npm run export
       - name: Disable Jekyll (GitHub Pages default)
         run: touch out/.nojekyll
