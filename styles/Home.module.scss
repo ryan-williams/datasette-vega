@@ -12,6 +12,11 @@ body.datasette-vega-demo {
   min-width: 47em;
   text-align: center;
   margin-bottom: 2em;
+
+  .urlInput {
+    width: 80%;
+    font-size: 1.2em;
+  }
 }
 
 .visContainer {

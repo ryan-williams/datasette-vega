@@ -8,18 +8,20 @@ export type Props = {
     jsonUrl: string
     markerType: MarkerType
     setMarkerType: (markerType: MarkerType) => void
-    xColumn: string | undefined
-    setXColumn: (xColumn: string | undefined) => void
+    xColumn: number
+    setXColumn: (xColumn: number) => void
     xType: AxisType
     setXType: (xType: AxisType) => void
-    yColumn: string | undefined
-    setYColumn: (yColumn: string | undefined) => void
+    yColumn: number
+    setYColumn: (yColumn: number) => void
     yType: AxisType
     setYType: (yType: AxisType) => void
-    colorColumn: string | undefined
-    setColorColumn: (colorColumn: string | undefined) => void
-    sizeColumn: string | undefined
-    setSizeColumn: (sizeColumn: string | undefined) => void
+    colorColumn: number | null
+    setColorColumn: (colorColumn: number | null) => void
+    colorType: AxisType
+    setColorType: (colorType: AxisType) => void
+    sizeColumn: number | null
+    setSizeColumn: (sizeColumn: number | null) => void
     containerClass?: string
     wrapperClass?: string
     visDivClass?: string
@@ -31,28 +33,24 @@ function ColumnSelect(
     {
         label,
         value,
-        setColumn,
+        setValue,
         columns,
+        includeNone,
     }: {
         label: string,
-        value: string | undefined,
-        setColumn: (value: string | undefined) => void,
-        columns: string[] | null,
+        value: number | null,
+        setValue: (value: number | null) => void
+        columns: string[] | null
+        includeNone?: boolean
     }
 ) {
     return (
         <label>
             {label}
             <div className="select-wrapper">
-                <select
-                    name={`${label.toLowerCase()}_column`}
-                    value={value || ""}
-                    onChange={e => setColumn(e.target.value)}
-                >
-                    <option value="">-- none --</option>
-                    {
-                        columns?.map(column => <option key={column} value={column}>{column}</option>)
-                    }
+                <select value={value === null ? "" : value} onChange={e => setValue(e.target.value === '' ? null : parseInt(e.target.value))}>
+                    {includeNone && <option value="">-- none --</option>}
+                    {columns?.map((column, idx) => <option key={column} value={idx}>{columns[idx]}</option>)}
                 </select>
             </div>
         </label>
@@ -61,38 +59,28 @@ function ColumnSelect(
 
 function AxisControlsRow(
     {
-        axis,
+        label,
         column, setColumn,
         type, setType,
         columns,
+        includeNone,
     }: {
-        axis: string
-        column: string | undefined,
-        setColumn: (column: string | undefined) => void,
-        type: AxisType,
-        setType: (type: AxisType) => void,
-        columns: string[] | null,
+        label: string
+        column: number | null,
+        setColumn: (column: number | null) => void
+        type: AxisType
+        setType: (type: AxisType) => void
+        columns: string[] | null
+        includeNone?: boolean
     }
 ) {
     return (
         <div className="filter-row" style={{ display: "flex", }}>
-            <label>
-                {axis.toUpperCase()} Column
-                <div className="select-wrapper">
-                    <select
-                        name={`${axis}_column`}
-                        value={column || ''}
-                        onChange={e => setColumn(e.target.value)}
-                    >{
-                        columns?.map(column => <option key={column} value={column}>{column}</option>)
-                    }</select>
-                </div>
-            </label>
+            <ColumnSelect label={label} value={column} setValue={setColumn} columns={columns} includeNone={includeNone} />
             <label>
                 Type
                 <div className="select-wrapper">
                     <select
-                        name={`${axis}_type`}
                         value={type}
                         onChange={e => setType(e.target.value as AxisType)}
                     >{
@@ -113,19 +101,34 @@ export default function DatasetteVega(
         yColumn, setYColumn,
         yType, setYType,
         colorColumn, setColorColumn,
+        colorType, setColorType,
         sizeColumn, setSizeColumn,
         containerClass, wrapperClass, visDivClass,
     }: Props
 ) {
-    const [ rows, setRows ] = useState<Row[] | null>(null)
     const [ columns, setColumns ] = useState<string[] | null>(null)
-
     const chartRef = useRef(null)
     const jsonArrayUrl = useMemo(
         () =>`${jsonUrl}${/\?/.exec(jsonUrl) ? '&' : '?'}_shape=array`,
         [ jsonUrl ],
     )
-
+    const xCol = useMemo(
+        () => columns ? columns[xColumn] : undefined,
+        [ xColumn, columns ],
+    )
+    const yCol = useMemo(
+        () => columns ? columns[yColumn] : undefined,
+        [ yColumn, columns ],
+    )
+    const colorCol = useMemo(
+        () => columns && colorColumn !== null ? columns[colorColumn] : undefined,
+        [ colorColumn, columns ],
+    )
+    const sizeCol = useMemo(
+        () => columns && sizeColumn !== null ? columns[sizeColumn] : undefined,
+        [ sizeColumn, columns ],
+    )
+    // Load jsonUrl (from localStorage), or fetch it
     useEffect(
         () => {
             const cachedStr = localStorage.getItem(jsonArrayUrl)
@@ -147,7 +150,6 @@ export default function DatasetteVega(
             rowsPromise.then(rows => {
                 if (rows.length > 1) {
                     console.log("got rows:", rows)
-                    setRows(rows)
                     // Set columns to first item's keys
                     const columns = Object.keys(rows[0]).map(key => {
                         // Do ANY of these rows have a .label property?
@@ -158,58 +160,55 @@ export default function DatasetteVega(
                         }
                     });
                     setColumns(columns)
-                    setXColumn(columns[0])
-                    setYColumn(columns[0])
                 }
             });
         },
-        [ jsonArrayUrl, setRows, setColumns, setXColumn, setYColumn ],
+        [ jsonArrayUrl, setColumns ],
     )
 
+    // Build a Vega-lite spec, render chart in designated DOM element
     useEffect(
         () => {
             const ref = chartRef.current
-            if (!ref || !xColumn || !yColumn) return
+            if (!ref || !xCol || !yCol) return
             const xt = VegaAxisTypes[xType]
             const yt = VegaAxisTypes[yType]
             const xBin = !!/, binned$/.exec(xType)
             const yBin = !!/, binned$/.exec(yType)
             const mark = markerType == 'Bar' ? 'bar' : markerType == 'Line' ? 'line' : 'circle'
             let encoding: any = {
-                x: { field: xColumn, type: xt, bin: xBin, },
-                y: { field: yColumn, type: yt, bin: yBin, },
-                tooltip: { field: "_tooltip_summary", type: "ordinal", },
+                x: { field: xCol, type: xt, bin: xBin, },
+                y: { field: yCol, type: yt, bin: yBin, },
+                // tooltip: { field: "_tooltip_summary", type: "ordinal", },
             }
-            if (colorColumn) {
-                encoding.color = { field: colorColumn, type: "nominal", }
+            if (colorCol) {
+                encoding.color = { field: colorCol, type: VegaAxisTypes[colorType], }
             }
-            if (sizeColumn) {
-                encoding.size = { field: sizeColumn, type: "quantitative", }
+            if (sizeCol) {
+                encoding.size = { field: sizeCol, type: "quantitative", }
             }
-            const xEsc = escapeString(xColumn)
-            const yEsc = escapeString(yColumn)
-            let calculate = `'${xEsc}: ' + datum['${xEsc}'] + ', ${yEsc}: ' + datum['${yEsc}']`
-            if (colorColumn) {
-                const colorEsc = escapeString(colorColumn)
-                calculate += ` + ', ${colorEsc}: ' + datum['${colorEsc}']`
+            function transformCol(col: string) {
+                const escaped = escapeString(col)
+                return `${escaped}: ' + datum['${escaped}']`
             }
-            if (sizeColumn) {
-                const sizeEsc = escapeString(sizeColumn)
-                calculate += ` + ', ${sizeEsc}: ' + datum['${sizeEsc}']`
-            }
+            let pieces = [ transformCol(xCol), transformCol(yCol) ]
+            if (colorCol) pieces.push(transformCol(colorCol))
+            if (sizeCol) pieces.push(transformCol(sizeCol))
+            const calculate = `'` + pieces.join(` + ',<br>`)
+            console.log("embed:", jsonArrayUrl, "xCol", xCol, "yCol", yCol, "calculate", calculate, "encoding", encoding)
             vegaEmbed(
                 ref,
                 {
                     data: { url: jsonArrayUrl, },
                     transform: [{ calculate,  as: "_tooltip_summary" }],
-                    mark,
+                    mark: { type: mark, tooltip: true, },
                     encoding,
                     width: "container",
                 },
                 { theme: 'quartz', tooltip: true, },
             )
         },
-        [ chartRef.current, xColumn, xType, yColumn, yType, colorColumn, sizeColumn, markerType, ]
+        [ chartRef.current, jsonArrayUrl, xCol, xType, yCol, yType, colorCol, colorType, sizeCol, markerType, ]
     )
 
     const swapAxes = useCallback(
@@ -241,18 +240,20 @@ export default function DatasetteVega(
                             </label>
                         ))
                     }</div>
-                    <AxisControlsRow axis={"x"} column={xColumn} setColumn={setXColumn} type={xType} setType={setXType} columns={columns} />
-                    <AxisControlsRow axis={"y"} column={yColumn} setColumn={setYColumn} type={yType} setType={setYType} columns={columns} />
+                    <AxisControlsRow label={"X Column"} column={xColumn} setColumn={v => setXColumn(v || 0)} type={xType} setType={setXType} columns={columns} />
+                    <AxisControlsRow label={"Y Column"} column={yColumn} setColumn={v => setYColumn(v || 0)} type={yType} setType={setYType} columns={columns} />
                     <div className="swap-x-y">
                         <button onClick={swapAxes}>Swap X and Y</button>
                     </div>
+                    <AxisControlsRow label={"Color"} column={colorColumn} setColumn={setColorColumn} type={colorType} setType={setColorType} columns={columns} includeNone={true} />
                     <div className="filter-row">
-                        <ColumnSelect label={"Color"} value={colorColumn} setColumn={setColorColumn} columns={columns} />
-                        <ColumnSelect label={"Size"} value={sizeColumn} setColumn={setSizeColumn} columns={columns} />
+                        <ColumnSelect label={"Size"} value={sizeColumn} setValue={setSizeColumn} columns={columns} includeNone={true} />
                     </div>
                 </form>
                 <div className={wrapperClass || ''}>
-                    <div className={visDivClass || ''} ref={chartRef}></div>
+                    <div className={visDivClass || ''} ref={chartRef}>
+                        {/* Embedded chart gets rendered here */}
+                    </div>
                 </div>
             </div>
             : null
