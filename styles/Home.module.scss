@@ -9,7 +9,6 @@ body.datasette-vega-demo {
 }
 
 .jsonUrlForm {
-  min-width: 47em;
   text-align: center;
   margin-bottom: 2em;
 
@@ -20,6 +19,7 @@ body.datasette-vega-demo {
 }
 
 .visContainer {
+  //max-width: 60em;
   width: 100%;
 }
 .visContainer {
@@ -36,7 +36,6 @@ body.datasette-vega-demo {
 }
 
 .visWrapper {
-  width: 80%;
   overflow: auto;
   margin: auto;
 }
@@ -50,10 +49,12 @@ body.datasette-vega-demo form div {
 
 .main {
   min-height: 100vh;
+  max-width: 70em;
   padding: 4rem 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin: auto;
 }
