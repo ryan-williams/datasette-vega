@@ -1,4 +1,4 @@
-import React, {FormEvent, useCallback, useEffect, useMemo} from "react";
+import React, {FormEvent, useCallback} from "react";
 import {enumParam, Param, ParsedParam, parseQueryParams, intParam, optIntParam, urlParam} from "next-utils/params";
 import css from "../styles/Home.module.scss";
 import DatasetteVega from "../src/DatasetteVega";
