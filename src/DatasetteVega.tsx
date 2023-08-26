@@ -1,8 +1,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState, MouseEvent} from 'react'
 import vegaEmbed from 'vega-embed'
 import {AxisType, AxisTypes, MarkerType, MarkerTypes, VegaAxisTypes} from "../pages"
-
-const escapeString = (s: string) => (s || '').replace(/"/g, '\\x22').replace(/'/g, '\\x27');
+import css from "./DatasetteVega.module.scss"
+import {useResizeDetector} from "react-resize-detector";
 
 export type Props = {
     jsonUrl: string
@@ -27,7 +27,7 @@ export type Props = {
     visDivClass?: string
 }
 
-type Row = any
+type Row = { [k: string]: any }
 
 function ColumnSelect(
     {
@@ -46,7 +46,7 @@ function ColumnSelect(
 ) {
     return (
         <label>
-            {label}
+            {label}{' '}
             <div className="select-wrapper">
                 <select value={value === null ? "" : value} onChange={e => setValue(e.target.value === '' ? null : parseInt(e.target.value))}>
                     {includeNone && <option value="">-- none --</option>}
@@ -78,7 +78,7 @@ function AxisControlsRow(
         <div className="filter-row" style={{ display: "flex", }}>
             <ColumnSelect label={label} value={column} setValue={setColumn} columns={columns} includeNone={includeNone} />
             <label>
-                Type
+                Type{' '}
                 <div className="select-wrapper">
                     <select
                         value={type}
@@ -107,7 +107,8 @@ export default function DatasetteVega(
     }: Props
 ) {
     const [ columns, setColumns ] = useState<string[] | null>(null)
-    const chartRef = useRef(null)
+    const wrapper = useResizeDetector();
+    const chartRef = useRef<HTMLDivElement>(null)
     const jsonArrayUrl = useMemo(
         () =>`${jsonUrl}${/\?/.exec(jsonUrl) ? '&' : '?'}_shape=array`,
         [ jsonUrl ],
@@ -179,7 +180,6 @@ export default function DatasetteVega(
             let encoding: any = {
                 x: { field: xCol, type: xt, bin: xBin, },
                 y: { field: yCol, type: yt, bin: yBin, },
-                // tooltip: { field: "_tooltip_summary", type: "ordinal", },
             }
             if (colorCol) {
                 encoding.color = { field: colorCol, type: VegaAxisTypes[colorType], }
@@ -187,28 +187,34 @@ export default function DatasetteVega(
             if (sizeCol) {
                 encoding.size = { field: sizeCol, type: "quantitative", }
             }
-            function transformCol(col: string) {
-                const escaped = escapeString(col)
-                return `${escaped}: ' + datum['${escaped}']`
-            }
-            let pieces = [ transformCol(xCol), transformCol(yCol) ]
-            if (colorCol) pieces.push(transformCol(colorCol))
-            if (sizeCol) pieces.push(transformCol(sizeCol))
-            const calculate = `'` + pieces.join(` + ',<br>`)
-            console.log("embed:", jsonArrayUrl, "xCol", xCol, "yCol", yCol, "calculate", calculate, "encoding", encoding)
+            console.log(
+                "embed:", jsonArrayUrl, "xCol", xCol, "yCol", yCol, "encoding", encoding,
+                "wrapper", wrapper.ref.current, "height", wrapper.height, wrapper.ref.current?.offsetHeight,
+                "ref", ref, "height", ref?.offsetHeight,
+            )
             vegaEmbed(
                 ref,
                 {
                     data: { url: jsonArrayUrl, },
-                    transform: [{ calculate,  as: "_tooltip_summary" }],
-                    mark: { type: mark, tooltip: true, },
+                    mark: { type: mark, tooltip: { content: "data", }, },
                     encoding,
+                    height: "container",
                     width: "container",
+                    autosize: { type: "fit" },
                 },
                 { theme: 'quartz', tooltip: true, },
             )
         },
-        [ chartRef.current, jsonArrayUrl, xCol, xType, yCol, yType, colorCol, colorType, sizeCol, markerType, ]
+        [
+            chartRef.current, chartRef.current?.offsetWidth, chartRef.current?.offsetHeight,
+            jsonArrayUrl,
+            xCol, xType,
+            yCol, yType,
+            colorCol, colorType,
+            sizeCol,
+            markerType,
+            wrapper.width, wrapper.height, wrapper.ref.current,
+        ]
     )
 
     const swapAxes = useCallback(
@@ -224,9 +230,9 @@ export default function DatasetteVega(
     return (
         (columns?.length && columns?.length > 1)
             ? <div className={containerClass || ''}>
-                <form action="" method="GET" id="graphForm" className="datasette-vega">
+                <form action="" method="GET" id="graphForm" className={css.datasetteVega}>
                     <h3>Charting options</h3>
-                    <div className="filter-row radio-buttons">{
+                    <div className={`filter-row ${css.radioButtons}`}>{
                         MarkerTypes.map(mt => (
                             <label key={mt}>
                                 <input
@@ -242,7 +248,7 @@ export default function DatasetteVega(
                     }</div>
                     <AxisControlsRow label={"X Column"} column={xColumn} setColumn={v => setXColumn(v || 0)} type={xType} setType={setXType} columns={columns} />
                     <AxisControlsRow label={"Y Column"} column={yColumn} setColumn={v => setYColumn(v || 0)} type={yType} setType={setYType} columns={columns} />
-                    <div className="swap-x-y">
+                    <div className={css.swapXY}>
                         <button onClick={swapAxes}>Swap X and Y</button>
                     </div>
                     <AxisControlsRow label={"Color"} column={colorColumn} setColumn={setColorColumn} type={colorType} setType={setColorType} columns={columns} includeNone={true} />
@@ -250,8 +256,8 @@ export default function DatasetteVega(
                         <ColumnSelect label={"Size"} value={sizeColumn} setValue={setSizeColumn} columns={columns} includeNone={true} />
                     </div>
                 </form>
-                <div className={wrapperClass || ''}>
-                    <div className={visDivClass || ''} ref={chartRef}>
+                <div ref={wrapper.ref} className={wrapperClass || ''}>
+                    <div className={`${css.vegaEmbed} ${visDivClass}`} ref={chartRef}>
                         {/* Embedded chart gets rendered here */}
                     </div>
                 </div>

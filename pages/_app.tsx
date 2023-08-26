@@ -1,8 +1,13 @@
 import '../styles/globals.css'
-import '../src/DatasetteVega.css';
 
 import type { AppProps } from 'next/app'
+import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />
+  return <>
+    <Head>
+      <link rel="stylesheet" href="https://latest.datasette.io/-/static/app.css" />
+    </Head>
+    <Component {...pageProps} />
+  </>
 }

@@ -119,12 +119,14 @@ export default function Home() {
                 <form className={css.jsonUrlForm} onSubmit={handleJsonUrlFormSubmit} method="GET">
                     <input id="jsonUrl" className={css.urlInput} type="text" name="url" defaultValue={jsonUrl} />
                     <input type="submit" value="Load" style={{ fontSize: "1.2em", border: "1px solid #ccc", }} />
-                    <p>
-                        Examples:
-                        {' '}<Link href={`${basePath}${examples.gamePtsTeamId}`}>game_id/pts/team_id</Link>,
-                        {' '}<Link href={`${basePath}${examples.ptsResult}`}>pts/opp_pts/result</Link>,
-                        {' '}<Link href={`${basePath}${examples.fatalCrashStats}`}>fatalities_per_billion_miles/speeding/alcohol/state</Link>,
-                    </p>
+                    <details>
+                        <summary>Examples</summary>
+                        <ul>
+                            <li><Link href={`${basePath}${examples.gamePtsTeamId}`}>NBA ELO: game_id/pts/team_id</Link></li>
+                            <li><Link href={`${basePath}${examples.ptsResult}`}>NBA ELO: pts/opp_pts/result</Link></li>
+                            <li><Link href={`${basePath}${examples.fatalCrashStats}`}>Crash stats by state</Link></li>
+                        </ul>
+                    </details>
                 </form>
                 <DatasetteVega
                     containerClass={css.visContainer}
